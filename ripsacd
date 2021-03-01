@@ -4,16 +4,29 @@
 #  ripsacd
 #
 #  Simple script for ripping SACDs from a compatible Blu-ray player and
-#  uploading them to a NAS via rsync.
+#  uploading them to a NAS via rsync. Tested on Ubuntu 20.04 LTS, but it
+#  may work on other Debian-based systems.
 #
 ################################################################################
 
-sacd_server="172.16.8.86"  # Change to the IP address of your Blu-ray player
+sacd_server=""   # IP address of your Blu-ray player. eg., "192.168.1.86"
+rsync_target=""  # where to upload sacd. eg., "my-synology:/volume1/music"
 rip_flags="--2ch-tracks --output-dsf  --dsf-nopad"
-rsync_target=  # where to upload sacd. eg., "my-synology:/volume1/music"
+
+if [ -z "${sacd_server}" ] && [ -n "${1}" ]; then
+  sacd_server="${1}"
+fi
+if [ -n "${sacd_server}" ]; then
+  2>&1 echo "Usage: $0 Blu-ray player IP address"
+  exit 1
+fi
+if [ -z "${rsync_target}" ] && [ -n "${2}" ]; then
+  rsync_target="${2}"
+fi
 
 export PATH=~/bin:$PATH
 command -v sacd_extract || (
+  echo "Installing sacd_extract..."
   cd ~ || exit
   mkdir -pv ~/bin
   sudo apt update && sudo apt upgrade
@@ -24,8 +37,8 @@ command -v sacd_extract || (
   if [ -x ./sacd_extract ]; then
     ln sacd_extract ~/bin/
   else
-    echo "Build of sacd_extract failed. See above for details."
-    exit 1
+    2>&1 echo "Build of sacd_extract failed. See above for details."
+    exit 2
   fi
 )
 
@@ -48,12 +61,12 @@ if sacd_extract --input ${sacd_server}:2002 ${rip_flags} --output-dir "${output}
   echo "Rip complete on $(date)"
   # shellcheck disable=SC2010
   tmpdir="$(ls "${output}" | grep -v '\.dsf$')"
-  [ -n "${tmpdir}" ] || exit 2
+  [ -n "${tmpdir}" ] || exit 3
   mv "${output}"/"${tmpdir}"/*.dsf "${output}" && rmdir "${output}"/"${tmpdir}"
   if [ -n "${rsync_target}" ]; then
     rsync -avui --progress --stats --rsync-path=/usr/bin/rsync "${HOME}"/sacd "${rsync_target}"
   fi
 else
-  echo "Rip failed. See output above."
-  exit 3
+  2>&1 echo "Rip failed. See output above."
+  exit 4
 fi
