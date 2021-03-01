@@ -13,12 +13,13 @@ sacd_server=""   # IP address of your Blu-ray player. eg., "192.168.1.86"
 rsync_target=""  # where to upload sacd. eg., "my-synology:/volume1/music"
 rip_flags="--2ch-tracks --output-dsf  --dsf-nopad"
 
-if [ -z "${sacd_server}" ] && [ -n "${1}" ]; then
-  sacd_server="${1}"
-fi
-if [ -n "${sacd_server}" ]; then
-  2>&1 echo "Usage: $0 Blu-ray player IP address"
-  exit 1
+if [ -z "${sacd_server}" ]; then
+  if [ -n "${1}" ]; then
+    sacd_server="${1}"
+  else
+    2>&1 echo "Usage: $0 Blu-ray player IP address"
+    exit 1
+  fi
 fi
 if [ -z "${rsync_target}" ] && [ -n "${2}" ]; then
   rsync_target="${2}"
@@ -26,11 +27,16 @@ fi
 
 export PATH=~/bin:$PATH
 command -v sacd_extract || (
-  echo "Installing sacd_extract..."
+  if command -v apt-get; then
+    echo "Installing sacd_extract..."
+  else
+    2>&1 echo "Only tested on a Debian-based system. Sorry."
+    exit 2
+  fi
   cd ~ || exit
   mkdir -pv ~/bin
-  sudo apt update && sudo apt upgrade
-  sudo apt install cmake git rsync
+  sudo apt-get update && sudo apt-get upgrade
+  sudo apt-get -y install cmake git rsync
   git clone https://github.com/setmind/sacd-ripper.git
   cd sacd-ripper/tools/sacd_extract || exit
   cmake . && make
@@ -38,7 +44,7 @@ command -v sacd_extract || (
     ln sacd_extract ~/bin/
   else
     2>&1 echo "Build of sacd_extract failed. See above for details."
-    exit 2
+    exit 3
   fi
 )
 
@@ -61,12 +67,12 @@ if sacd_extract --input ${sacd_server}:2002 ${rip_flags} --output-dir "${output}
   echo "Rip complete on $(date)"
   # shellcheck disable=SC2010
   tmpdir="$(ls "${output}" | grep -v '\.dsf$')"
-  [ -n "${tmpdir}" ] || exit 3
+  [ -n "${tmpdir}" ] || exit 4
   mv "${output}"/"${tmpdir}"/*.dsf "${output}" && rmdir "${output}"/"${tmpdir}"
   if [ -n "${rsync_target}" ]; then
     rsync -avui --progress --stats --rsync-path=/usr/bin/rsync "${HOME}"/sacd "${rsync_target}"
   fi
 else
   2>&1 echo "Rip failed. See output above."
-  exit 4
+  exit 5
 fi
