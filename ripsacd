@@ -57,7 +57,7 @@ Artist="$(echo "${Artist}" | tr -d '/\\;/')"
 Title="$(echo "${Title}" | tr -d '/\\;/')"
 
 if [ -z "${Artist}" ] || [ -z "${Title}" ]; then
-  2>&1 echo "Could not get Artist or Title info from {sacd_player}"
+  2>&1 echo "Could not get Artist or Title info from ${sacd_server}"
   exit 2
 fi
 
