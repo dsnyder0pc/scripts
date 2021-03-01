@@ -62,12 +62,12 @@ mkdir -pv "${output}"
 echo "----------------------------------------"
 echo "Ripping ${Title} on $(date)"
 # shellcheck disable=SC2086
-if sacd_extract --input ${sacd_server}:2002 ${rip_flags} --output-dir "${output}"; then
+sacd_extract --input ${sacd_server}:2002 ${rip_flags} --output-dir "${output}"
+# shellcheck disable=SC2010
+tmpdir="$(ls "${output}" | grep -v '\.dsf$')"
+if  [ -n "${tmpdir}" ]; then
   echo "----------------------------------------"
   echo "Rip complete on $(date)"
-  # shellcheck disable=SC2010
-  tmpdir="$(ls "${output}" | grep -v '\.dsf$')"
-  [ -n "${tmpdir}" ] || exit 4
   mv "${output}"/"${tmpdir}"/*.dsf "${output}" && rmdir "${output}"/"${tmpdir}"
   if [ -n "${rsync_target}" ]; then
     rsync -avui --progress --stats --rsync-path=/usr/bin/rsync "${HOME}"/sacd "${rsync_target}"
