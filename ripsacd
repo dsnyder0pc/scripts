@@ -7,6 +7,11 @@
 #  uploading them to a NAS via rsync. Tested on Ubuntu 20.04 LTS, but it
 #  may work on other Debian-based systems.
 #
+#  Works with these players: https://tinyurl.com/Sony-SACD-Players
+#
+#  More info here:
+#  https://gist.github.com/willsthompson/a4ececdee9cbc4e369eb923e136a8243
+#
 ################################################################################
 
 sacd_server=""   # IP address of your Blu-ray player. eg., "192.168.1.86"
