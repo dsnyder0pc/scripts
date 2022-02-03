@@ -452,6 +452,8 @@ Like C<-i>, this is a comma separated list of Perl regular
 expressions.  Subdirectories that match any of the patterns will not
 be searched or included in the report.
 
+=back
+
 =head1 SEE ALSO
 
 L<du>, L<df>
