@@ -44,7 +44,7 @@ command -v sacd_extract || (
   sudo apt-get -y install cmake git rsync
   git clone https://github.com/setmind/sacd-ripper.git
   cd sacd-ripper/tools/sacd_extract || exit
-  cmake . && make
+  cmake . -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_C_FLAGS="-fcommon" && make
   if [ -x ./sacd_extract ]; then
     ln sacd_extract ~/bin/
   else
