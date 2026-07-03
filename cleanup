@@ -1,59 +1,55 @@
 #!/usr/bin/env python3
-################################################################################
-#
-#  cleanup
-#
-#  My Desktop gets super cluttered with web links that I want to save and
-#  Screenshots that I make throught the day. I'll run this fromt ime to time
-#  to clean things up. These files are archived as follow:
-#
-#    Bookmarks:    ~/Documents/Links/YYYY/MM/$filename.webloc
-#    Screenshots:  ~/Pictures/Screenshots/YYYY/MM/$filename.webloc
-#
-#  I may eventually add support for other types of files or optionally
-#  preserve files that are less than 8 hours old, etc.
-#
-################################################################################
+"""cleanup.
+
+My Desktop gets super cluttered with web links that I want to save and
+Screenshots that I make through the day. I'll run this from time to time
+to clean things up. These files are archived as follows:
+
+  Bookmarks:    ~/Documents/Links/YYYY/MM/$filename.webloc
+  Screenshots:  ~/Pictures/Screenshots/YYYY/MM/$filename.webloc
+
+I may eventually add support for other types of files or optionally
+preserve files that are less than 8 hours old, etc.
+"""
 
 from os import getenv, getuid, makedirs, path, rename, scandir
 from re import match, search
+import sys
 from time import localtime, strftime
-from sys import stderr
 from pwd import getpwuid
 
-########################################
-#
-#  Given a path prefix (str) and the
-#  modification time for a file,
-#  returns a path (str) with subdirs
-#  for year (4 digits) and month
-#  (2 digits).
-#
+
 def dir_from_timestamp(prefix: str, mtime: int) -> str:
+    """Return a path with subdirs for year (4 digits) and month (2 digits).
+
+    Given a path prefix (str) and the modification time for a file (int),
+    returns a path (str) with subdirs for year and month.
+    """
     loc_time = localtime(mtime)
     return path.join(prefix, strftime("%Y", loc_time), strftime("%m", loc_time))
 
 
 def main():
+    """Find the owner's Desktop directory and archive clutter files."""
     # First, let's find the owner's Desktop dir
     # Probably does not do anything sensible under sudo
     my_homedir = getenv("__HOME", getpwuid(getuid())[5])
     my_desktop = path.join(my_homedir, "Desktop")
     if not path.isdir(my_desktop):
-        print("Could not find your desktop!", file=stderr)
-        exit(1)
+        print("Could not find your desktop!", file=sys.stderr)
+        sys.exit(1)
 
     # Archive files that don't belong on the desktop
     with scandir(my_desktop) as clutter:
         for file in clutter:
-            if not file.is_file() or match("\.", file.name):
+            if not file.is_file() or match(r"\.", file.name):
                 continue
 
             # Locations are hard-coded for now...may eventually move to
             # configurable map
-            if search("\.webloc$", file.name):
+            if search(r"\.webloc$", file.name):
                 prefix = path.join(my_homedir, "Documents", "Links")
-            elif match("Screen Shot ", file.name) and search("\.png$", file.name):
+            elif match("Screen Shot ", file.name) and search(r"\.png$", file.name):
                 prefix = path.join(my_homedir, "Pictures", "Screenshots")
             else:
                 print("- Skipping " + file.name)
@@ -67,7 +63,7 @@ def main():
             # Make sure that the target dir exists, then move the files
             makedirs(target_dir, mode=0o777, exist_ok=True)
             print("- moving " + file.name + " to " + target_dir)
-            rename(source, path.join(target_dir, file.name))
+            rename(source, dest)
 
 
 if __name__ == "__main__":
