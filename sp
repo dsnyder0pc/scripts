@@ -13,6 +13,32 @@
 #  to quickly isolate files and directories that can be removed to
 #  reclaim space.
 #
+#  Author:  David C. Snyder - 6/24/1999
+#
+#  $Log: sp,v $
+#  Revision 1.6  2007/03/30 18:27:18  dsnyder
+#  - fix first line
+#
+#  Revision 1.5  2007/03/30 18:23:43  dsnyder
+#  - attempt to deal with inode numbers that are larger than max int
+#    (patch provied by Andy Barfoot
+#
+#  Revision 1.4  1999/06/30 21:59:20  dsnyder
+#  - Fixed large inode bit vector explosion
+#  - Added command line options
+#  - Added on-line and pod documentation
+#  - Added support for crossing filesystem boundaries
+#  - Probably added some bugs
+#
+#  Revision 1.3  1999/06/28 13:07:45  dsnyder
+#  - Fix a few typos and spelling errors
+#
+#  Revision 1.2  1999/06/26 18:23:17  dsnyder
+#  - Fake inode numbers so that we can support WIN32
+#
+#  Revision 1.1  1999/06/24 21:01:34  dsnyder
+#  - Like du(1), but better reporting and less output
+#
 ################################################################################
 use Getopt::Std;
 use strict;
@@ -370,11 +396,11 @@ directory tree.
 
 =over 4
 
-=item C<-h>
+=item B<-h>
 
 Display a brief summary of the command line options.
 
-=item C<-d>
+=item B<-d>
 
 Cross filesystem boundaries.  By default, B<sp> only scans
 subdirectories that are in the same filesystem as the parent
@@ -385,26 +411,26 @@ Note that if the directories specified on the command line are not all
 on the same filesystem, they will still all be searched, even if the
 C<-d> option is not present.  This is not a bug; it's a feature.
 
-=item C<-f>
+=item B<-f>
 
 Process symbolic links by using the file or directory which the
 symbolic link references, rather than the link itself.  This is like
 the C<-L> option of B<du>.
 
-=item C<-H>
+=item B<-H>
 
 Format the space report in HTML as table rows rather than plain text. 
 By default, the <TABLE> and </TABLE> tags are omitted.  The idea is
 that the user will include the generated HTML in CGI output or in an
 existing HTML file and may want to provide their own <TABLE> tags.
 
-=item C<-T>
+=item B<-T>
 
 Include <TABLE> ...  </TABLE> HTML tags when formatting the report as
 HTML.  In the absence of the C<-H> or C<-R> option, this option has no
 effect.
 
-=item C<-R> I<rows>
+=item B<-R> I<rows>
 
 Instead of writing to I<stdout>, write to one or more HTML files.
 Each HTML file will contain no more than the specified number of rows.
@@ -412,12 +438,12 @@ By default, the HTML files will be written in the current working
 directory, and each filename will begin with C<"sp">.  This prefix can be
 changed via the C<-P> option.  This option implies C<-H>.
 
-=item C<-P> I<prefix>
+=item B<-P> I<prefix>
 
 Use the specified I<prefix>, rather than the default C<"sp"> for HTML
 files.  This option is ignored unless C<-R> is present.
 
-=item C<-c> I<cols>
+=item B<-c> I<cols>
 
 Force output width to the specified number of columns.  Values smaller
 than 34 will be silently rounded up to 34.  To achieve the specified
@@ -427,7 +453,7 @@ By default, the output width is autoscaled so that the longest path
 can be displayed without truncation.  This option only affects plain
 text report formatting.
 
-=item C<-m> I<size>
+=item B<-m> I<size>
 
 Exclude files or subdirectories that consume less than the specified
 number of KB from the report.  The default is 1024, which seems to
@@ -437,7 +463,7 @@ wish to lower this to 256, but anything much smaller is likely to
 cause all but the largest systems to run out virtual memory when
 processing a large directory structure.
 
-=item C<-i> I<pattern, ...>
+=item B<-i> I<pattern, ...>
 
 This is a comma separated list of Perl regular expressions which will
 be applied to each directory that B<sp> searches.  If C<-i> is
@@ -446,7 +472,7 @@ searched and subsequently included in the report.  This option is
 usually used to prune the directories searched to reduce output size
 and run-time.
 
-=item C<-x> I<pattern, ...>
+=item B<-x> I<pattern, ...>
 
 Like C<-i>, this is a comma separated list of Perl regular
 expressions.  Subdirectories that match any of the patterns will not

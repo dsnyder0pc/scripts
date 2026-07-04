@@ -14,18 +14,19 @@
 #
 ################################################################################
 
-sacd_server=""   # IP address of your Blu-ray player. eg., "192.168.1.86"
-rsync_target=""  # where to upload sacd. eg., "my-synology:/volume1/music"
-rip_flags="--2ch-tracks --output-dsf  --dsf-nopad"
+sacd_server="172.16.8.184"   # IP address of your Blu-ray player.
+rsync_target="files:/volume1/cd/sacd"  # where to upload sacd.
+rip_flags="--2ch-tracks --output-dsf --dsf-nopad"
 
 if [ -z "${sacd_server}" ]; then
   if [ -n "${1}" ]; then
     sacd_server="${1}"
   else
-    2>&1 echo "Usage: $0 Blu-ray player IP address"
+    2>&1 echo "Usage: $0 <Blu-ray player IP address>"
     exit 1
   fi
 fi
+
 if [ -z "${rsync_target}" ] && [ -n "${2}" ]; then
   rsync_target="${2}"
 fi
@@ -38,6 +39,7 @@ command -v sacd_extract || (
     2>&1 echo "Only tested on a Debian-based system. Sorry."
     exit 2
   fi
+
   cd ~ || exit
   mkdir -pv ~/bin
   sudo apt-get update && sudo apt-get upgrade
@@ -54,33 +56,47 @@ command -v sacd_extract || (
 )
 
 eval "$(
-  sacd_extract --input "${sacd_server}":2002 --print |
+  sacd_extract --input "${sacd_server}:2002" --print |
   perl -ne 'print "$1=\"$2\"\n" if /^\t(\w+): (.*)/'
 )"
 
 Artist="$(echo "${Artist}" | tr -d '/\\;/' | sed 's/^ *//;s/ *$//')"
 Title="$(echo "${Title}"   | tr -d '/\\;/' | sed 's/^ *//;s/ *$//')"
 
+# If metadata is missing, prompt the user for input
 if [ -z "${Artist}" ] || [ -z "${Title}" ]; then
-  2>&1 echo "Could not get Artist or Title info from ${sacd_server}"
-  exit 2
+  echo "Metadata not found on disc. Please enter details manually."
+  if [ -z "${Artist}" ]; then
+    read -rp "Artist: " Artist
+  fi
+  if [ -z "${Title}" ]; then
+    read -rp "Album Title: " Title
+  fi
+fi
+
+# Final check to ensure we aren't creating an empty path
+if [ -z "${Artist}" ] || [ -z "${Title}" ]; then
+  2>&1 echo "Error: Artist and Title are required to continue."
+  exit 4
 fi
 
 output="${HOME}/sacd/${Artist}/${Title} (SACD)"
 umask 002
 mkdir -pv "${output}"
+
 echo "----------------------------------------"
 echo "Ripping ${Title} on $(date)"
 # shellcheck disable=SC2086
-sacd_extract --input ${sacd_server}:2002 ${rip_flags} --output-dir "${output}"
+sacd_extract --input "${sacd_server}:2002" ${rip_flags} --output-dir "${output}"
+
 # shellcheck disable=SC2010
 tmpdir="$(ls "${output}" | grep -v '\.dsf$')"
-if  [ -n "${tmpdir}" ]; then
+if [ -n "${tmpdir}" ]; then
   echo "----------------------------------------"
   echo "Rip complete on $(date)"
   mv "${output}"/"${tmpdir}"/*.dsf "${output}" && rmdir "${output}"/"${tmpdir}"
   if [ -n "${rsync_target}" ]; then
-    rsync -avui --progress --stats --rsync-path=/usr/bin/rsync "${HOME}"/sacd "${rsync_target}"
+    rsync -avui --progress --stats --rsync-path=/usr/bin/rsync "${HOME}/sacd" "${rsync_target}"
   fi
 else
   2>&1 echo "Rip failed. See output above."
