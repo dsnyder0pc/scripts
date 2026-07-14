@@ -4,8 +4,8 @@
 #  ripsacd
 #
 #  Simple script for ripping SACDs from a compatible Blu-ray player and
-#  uploading them to a NAS via rsync. Tested on Ubuntu 20.04 LTS, but it
-#  may work on other Debian-based systems.
+#  uploading them to a NAS via rsync. Tested on Ubuntu 20.04 LTS and Arch Linux,
+#  but it may work on other Debian/Arch-based systems.
 #
 #  Works with these players: https://tinyurl.com/Sony-SACD-Players
 #
@@ -33,17 +33,21 @@ fi
 
 export PATH=~/bin:$PATH
 command -v sacd_extract || (
-  if command -v apt-get; then
-    echo "Installing sacd_extract..."
+  cd ~ || exit
+  mkdir -pv ~/bin
+
+  if command -v apt-get >/dev/null 2>&1; then
+    echo "Installing dependencies on Debian-based system..."
+    sudo apt-get update && sudo apt-get upgrade
+    sudo apt-get -y install cmake git rsync
+  elif command -v pacman >/dev/null 2>&1; then
+    echo "Installing dependencies on Arch Linux system..."
+    sudo pacman -Syu --needed --noconfirm base-devel cmake git rsync
   else
-    2>&1 echo "Only tested on a Debian-based system. Sorry."
+    2>&1 echo "Only Debian and Arch Linux systems are supported. Sorry."
     exit 2
   fi
 
-  cd ~ || exit
-  mkdir -pv ~/bin
-  sudo apt-get update && sudo apt-get upgrade
-  sudo apt-get -y install cmake git rsync
   git clone https://github.com/setmind/sacd-ripper.git
   cd sacd-ripper/tools/sacd_extract || exit
   cmake . -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_C_FLAGS="-fcommon" && make
@@ -55,13 +59,43 @@ command -v sacd_extract || (
   fi
 )
 
-eval "$(
-  sacd_extract --input "${sacd_server}:2002" --print |
-  perl -ne 'print "$1=\"$2\"\n" if /^\t(\w+): (.*)/'
-)"
+clean_metadata() {
+  local val="$1"
+  # Trim leading and trailing whitespace
+  val="${val#"${val%%[![:space:]]*}"}"
+  val="${val%"${val##*[![:space:]]}"}"
+  # Strip surrounding quotes if they exist
+  if [[ "$val" == \"*\" ]]; then
+    val="${val#\"}"
+    val="${val%\"}"
+    # Trim whitespace again
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+  fi
+  # Remove characters that are invalid or problematic in directory names
+  val="$(echo "$val" | tr -d '\\/;')"
+  echo "$val"
+}
 
-Artist="$(echo "${Artist}" | tr -d '/\\;/' | sed 's/^ *//;s/ *$//')"
-Title="$(echo "${Title}"   | tr -d '/\\;/' | sed 's/^ *//;s/ *$//')"
+# Fetch disc info once
+sacd_info="$(sacd_extract --input "${sacd_server}:2002" --print)"
+
+Artist=""
+Title=""
+while IFS= read -r line; do
+  if [[ "$line" =~ ^[[:space:]]+([^:]+):[[:space:]]*(.*)$ ]]; then
+    key="${BASH_REMATCH[1]}"
+    val="${BASH_REMATCH[2]}"
+    if [[ "$key" == "Artist" && -z "$Artist" ]]; then
+      Artist="$val"
+    elif [[ "$key" == "Title" && -z "$Title" ]]; then
+      Title="$val"
+    fi
+  fi
+done <<< "$sacd_info"
+
+Artist="$(clean_metadata "${Artist}")"
+Title="$(clean_metadata "${Title}")"
 
 # If metadata is missing, prompt the user for input
 if [ -z "${Artist}" ] || [ -z "${Title}" ]; then
